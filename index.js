@@ -1,22 +1,44 @@
-const { Telegraf } = require('telegraf');
+export default {
+  async fetch(request, env) {
+    if (request.method !== "POST") {
+      return new Response("PENGUEN BOT is running");
+    }
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+    const update = await request.json();
+    const message = update.message;
 
-const wallet = process.env.TRC20_ADDRESS;
+    if (!message) return new Response("OK");
 
-bot.start((ctx) => {
-  ctx.reply(
-    '🐧 أهلاً بك في متجر PENGUEN\n\n' +
-    '💰 للدفع باستخدام USDT TRC20\n\n' +
-    'محفظة الاستقبال:\n' + wallet +
-    '\n\nبعد التحويل أرسل رقم العملية (TXID).'
-  );
-});
+    const chatId = message.chat.id;
+    const text = message.text || "";
 
-bot.command('wallet', (ctx) => {
-  ctx.reply('عنوان محفظة الدفع:\n' + wallet);
-});
+    let reply;
 
-bot.launch();
+    if (text === "/start") {
+      reply =
+        "🐧 أهلاً بك في متجر PENGUEN\n\n" +
+        "💰 الدفع بواسطة USDT TRC20\n\n" +
+        "عنوان المحفظة:\n" +
+        env.TRC20_ADDRESS +
+        "\n\nبعد الدفع أرسل رقم العملية TXID.";
+    } else if (text === "/wallet") {
+      reply = "عنوان محفظة الدفع:\n" + env.TRC20_ADDRESS;
+    } else {
+      reply = "أرسل /start لبدء استخدام متجر PENGUEN.";
+    }
 
-console.log('PENGUEN BOT STARTED');
+    await fetch(
+      `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: reply
+        })
+      }
+    );
+
+    return new Response("OK");
+  }
+};
